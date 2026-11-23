@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="三维向量的标准正交基、基变换、二维投影与施密特正交化交互可视化">
+  <title>三维线性代数实验室 | Vector Space Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --bg-deep: #040a13;
+      --panel: rgba(13, 27, 46, 0.82);
+      --panel-solid: #0d1b2e;
+      --panel-soft: rgba(19, 39, 65, 0.66);
+      --line: rgba(148, 184, 229, 0.16);
+      --line-strong: rgba(148, 184, 229, 0.3);
+      --text: #eff6ff;
+      --muted: #91a7c1;
+      --dim: #62758d;
+      --cyan: #4de2e8;
+      --blue: #62a8ff;
+      --green: #5ee6a8;
+      --gold: #ffd166;
+      --pink: #ff7eb6;
+      --violet: #ad8bff;
+      --red: #ff6b78;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-width: 320px;
+      background: var(--bg-deep);
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 78% 8%, rgba(77, 226, 232, 0.1), transparent 30%),
+        radial-gradient(circle at 8% 90%, rgba(173, 139, 255, 0.1), transparent 34%),
+        linear-gradient(145deg, #06101d 0%, #071421 45%, #050b14 100%);
+      font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .ambient {
+      position: fixed;
+      z-index: 0;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(100px);
+      opacity: 0.12;
+    }
+
+    .ambient-one {
+      top: -180px;
+      right: 8%;
+      background: var(--cyan);
+    }
+
+    .ambient-two {
+      bottom: -230px;
+      left: 20%;
+      background: var(--violet);
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      width: 100vw;
+      height: 100vh;
+      padding: 22px;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-height: 66px;
+      padding: 0 6px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      min-width: 260px;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 45px;
+      height: 45px;
+      border: 1px solid rgba(77, 226, 232, 0.42);
+      border-radius: 14px;
+      color: var(--cyan);
+      background: linear-gradient(145deg, rgba(77, 226, 232, 0.15), rgba(98, 168, 255, 0.06));
+      box-shadow: inset 0 0 20px rgba(77, 226, 232, 0.06);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .brand-mark::after {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      top: -3px;
+      right: -3px;
+      border: 2px solid var(--bg);
+      border-radius: 50%;
+      background: var(--green);
+      content: "";
+    }
+
+    .brand-copy h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-copy p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, max-content);
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(8, 19, 33, 0.68);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+      backdrop-filter: blur(18px);
+    }
+
+    .mode-tab {
+      position: relative;
+      min-width: 104px;
+      padding: 10px 13px;
+      border: 0;
+      border-radius: 11px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+    }
+
+    .mode-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .mode-tab:active {
+      transform: translateY(1px);
+    }
+
+    .mode-tab.active {
+      color: #041116;
+      background: linear-gradient(120deg, var(--cyan), #8beeef);
+      box-shadow: 0 8px 24px rgba(77, 226, 232, 0.18);
+    }
+
+    .mode-tab .tab-index {
+      margin-right: 6px;
+      opacity: 0.55;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(330px, 390px) minmax(0, 1fr);
+      min-height: 0;
+      gap: 16px;
+    }
+
+    .sidebar,
+    .stage {
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+
+    .sidebar {
+      position: relative;
+      overflow: auto;
+      padding: 24px;
+      scrollbar-color: rgba(145, 167, 193, 0.3) transparent;
+      scrollbar-width: thin;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background: rgba(145, 167, 193, 0.24);
+    }
+
+    .mode-panel {
+      display: none;
+      animation: panel-in 280ms ease both;
+    }
+
+    .mode-panel.active {
+      display: block;
+    }
+
+    @keyframes panel-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 12px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 20px;
+      height: 1px;
+      background: currentColor;
+      content: "";
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 25px;
+      font-weight: 650;
+      letter-spacing: -0.025em;
+    }
+
+    .panel-intro {
+      margin: 10px 0 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .field-group {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel-soft);
+    }
+
+    .field-group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .field-label {
+      color: #c6d6e9;
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+    }
+
+    .field-note {
+      color: var(--dim);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .vector-input {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .axis-field {
+      position: relative;
+    }
+
+    .axis-field span {
+      position: absolute;
+      z-index: 1;
+      top: 50%;
+      left: 11px;
+      color: var(--dim);
+      font-size: 10px;
+      font-weight: 700;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .axis-field input {
+      width: 100%;
+      height: 43px;
+      padding: 0 9px 0 29px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: 0;
+      color: var(--text);
+      background: rgba(4, 12, 23, 0.64);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .axis-field input:hover,
+    .axis-field input:focus {
+      border-color: rgba(77, 226, 232, 0.45);
+      box-shadow: 0 0 0 3px rgba(77, 226, 232, 0.06);
+    }
+
+    .basis-input {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      align-items: center;
+      gap: 9px;
+      margin-top: 9px;
+    }
+
+    .basis-name {
+      color: var(--muted);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 118px;
+      padding: 13px 14px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: 0;
+      color: var(--text);
+      background: rgba(4, 12, 23, 0.64);
+      font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    textarea:focus {
+      border-color: rgba(77, 226, 232, 0.45);
+      box-shadow: 0 0 0 3px rgba(77, 226, 232, 0.06);
+    }
+
+    .help-text {
+      margin: 8px 0 0;
+      color: var(--dim);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: stretch;
+      gap: 9px;
+      margin-top: 18px;
+    }
+
+    .primary-button,
+    .ghost-button,
+    .canvas-button {
+      border: 0;
+      cursor: pointer;
+      font-weight: 650;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+
+    .primary-button {
+      min-height: 47px;
+      padding: 0 17px;
+      border-radius: 12px;
+      color: #041216;
+      background: linear-gradient(120deg, var(--cyan), #8ce8e9);
+      box-shadow: 0 10px 26px rgba(77, 226, 232, 0.14);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .primary-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 13px 30px rgba(77, 226, 232, 0.2);
+    }
+
+    .primary-button:active,
+    .ghost-button:active,
+    .canvas-button:active {
+      transform: translateY(1px);
+    }
+
+    .ghost-button {
+      min-width: 54px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 11px;
+    }
+
+    .ghost-button:hover {
+      color: var(--text);
+      border-color: var(--line-strong);
+    }
+
+    .result-box {
+      margin-top: 18px;
+      padding: 15px 16px;
+      border: 1px solid rgba(77, 226, 232, 0.16);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(77, 226, 232, 0.065), rgba(98, 168, 255, 0.025));
+    }
+
+    .result-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 10px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .result-title::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 9px currentColor;
+      content: "";
+    }
+
+    .result-content {
+      color: #c9d9ea;
+      font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.85;
+      overflow-wrap: anywhere;
+    }
+
+    .result-content strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .result-content .ok {
+      color: var(--green);
+    }
+
+    .result-content .warn {
+      color: var(--gold);
+    }
+
+    .result-content .error {
+      color: var(--red);
+    }
+
+    .formula {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--dim);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 44%, rgba(20, 51, 79, 0.48), transparent 57%),
+        linear-gradient(145deg, rgba(9, 21, 37, 0.92), rgba(5, 12, 22, 0.98));
+    }
+
+    .stage::after {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: inherit;
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.03), inset 0 -90px 110px rgba(2, 7, 13, 0.36);
+      content: "";
+      pointer-events: none;
+    }
+
+    .stage-toolbar {
+      position: absolute;
+      z-index: 4;
+      top: 20px;
+      left: 22px;
+      right: 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      pointer-events: none;
+    }
+
+    .stage-heading {
+      max-width: 520px;
+    }
+
+    .stage-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--cyan);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.19em;
+      text-transform: uppercase;
+    }
+
+    .stage-kicker::before {
+      width: 7px;
+      height: 7px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      content: "";
+    }
+
+    .stage-title {
+      margin: 0;
+      font-size: clamp(18px, 2vw, 28px);
+      font-weight: 550;
+      letter-spacing: -0.025em;
+    }
+
+    .stage-subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .canvas-actions {
+      display: flex;
+      gap: 7px;
+      pointer-events: auto;
+    }
+
+    .canvas-button {
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--muted);
+      background: rgba(6, 16, 29, 0.72);
+      backdrop-filter: blur(14px);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .canvas-button:hover {
+      color: var(--text);
+      border-color: rgba(77, 226, 232, 0.32);
+    }
+
+    #scene {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #scene:active {
+      cursor: grabbing;
+    }
+
+    .scene-legend {
+      position: absolute;
+      z-index: 4;
+      bottom: 20px;
+      left: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      max-width: calc(100% - 200px);
+      pointer-events: none;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--muted);
+      background: rgba(5, 14, 25, 0.68);
+      backdrop-filter: blur(12px);
+      font-size: 9px;
+      letter-spacing: 0.04em;
+    }
+
+    .legend-swatch {
+      width: 13px;
+      height: 2px;
+      border-radius: 2px;
+      background: currentColor;
+      box-shadow: 0 0 7px currentColor;
+    }
+
+    .scene-tip {
+      position: absolute;
+      z-index: 4;
+      right: 21px;
+      bottom: 22px;
+      color: rgba(145, 167, 193, 0.58);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: 28px;
+      padding: 10px 15px;
+      border: 1px solid rgba(77, 226, 232, 0.24);
+      border-radius: 10px;
+      color: var(--text);
+      background: rgba(8, 21, 37, 0.94);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+      font-size: 11px;
+      opacity: 0;
+      transform: translate(-50%, 12px);
+      transition: opacity 180ms ease, transform 180ms ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (max-width: 1040px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        padding: 16px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .mode-tabs {
+        width: 100%;
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .mode-tab {
+        min-width: 0;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        overflow: visible;
+      }
+
+      .stage {
+        min-height: 620px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .app {
+        padding: 10px;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .brand-copy p {
+        letter-spacing: 0.08em;
+      }
+
+      .mode-tab {
+        padding: 9px 5px;
+        font-size: 10px;
+      }
+
+      .mode-tab .tab-index {
+        display: none;
+      }
+
+      .sidebar {
+        padding: 18px;
+      }
+
+      .stage {
+        min-height: 520px;
+        border-radius: 18px;
+      }
+
+      .stage-toolbar {
+        top: 16px;
+        left: 16px;
+        right: 14px;
+      }
+
+      .stage-subtitle {
+        display: none;
+      }
+
+      .canvas-button:first-child {
+        display: none;
+      }
+
+      .scene-legend {
+        left: 14px;
+        bottom: 15px;
+        max-width: calc(100% - 28px);
+      }
+
+      .scene-tip {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">∑</div>
+        <div class="brand-copy">
+          <h1>三维线性代数实验室</h1>
+          <p>Interactive Vector Space Lab</p>
+        </div>
+      </div>
+
+      <nav class="mode-tabs" aria-label="可视化模式">
+        <button class="mode-tab active" type="button" data-mode="standard" aria-selected="true">
+          <span class="tab-index">01</span>标准正交基
+        </button>
+        <button class="mode-tab" type="button" data-mode="basis" aria-selected="false">
+          <span class="tab-index">02</span>新基坐标
+        </button>
+        <button class="mode-tab" type="button" data-mode="projection" aria-selected="false">
+          <span class="tab-index">03</span>二维投影
+        </button>
+        <button class="mode-tab" type="button" data-mode="gram" aria-selected="false">
+          <span class="tab-index">04</span>施密特正交基
+        </button>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="mode-panel active" id="panel-standard" aria-labelledby="title-standard">
+          <p class="eyebrow">Mode 01 / Coordinates</p>
+          <h2 class="panel-title" id="title-standard">标准正交基显示</h2>
+          <p class="panel-intro">
+            输入三维坐标向量，在由标准正交基 e₁、e₂、e₃ 张成的空间中显示该向量及其三个坐标分量。
+          </p>
+
+          <div class="field-group">
+            <div class="field-group-header">
+              <span class="field-label">三维向量 v</span>
+              <span class="field-note">E coordinates</span>
+            </div>
+            <div class="vector-input">
+              <label class="axis-field"><span>X</span><input id="std-x" type="number" step="0.1" value="3" aria-label="v 的 x 坐标"></label>
+              <label class="axis-field"><span>Y</span><input id="std-y" type="number" step="0.1" value="2" aria-label="v 的 y 坐标"></label>
+              <label class="axis-field"><span>Z</span><input id="std-z" type="number" step="0.1" value="2" aria-label="v 的 z 坐标"></label>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="run-standard" type="button">计算并更新三维视图</button>
+            <button class="ghost-button" id="reset-standard" type="button">示例</button>
+          </div>
+
+          <div class="result-box" aria-live="polite">
+            <div class="result-title">实时结果</div>
+            <div class="result-content" id="result-standard"></div>
+            <div class="formula">v = vₓe₁ + vᵧe₂ + v_z e₃</div>
+          </div>
+        </section>
+
+        <section class="mode-panel" id="panel-basis" aria-labelledby="title-basis">
+          <p class="eyebrow">Mode 02 / Basis Change</p>
+          <h2 class="panel-title" id="title-basis">向量在新基下的坐标</h2>
+          <p class="panel-intro">
+            输入一组新基 B = (b₁, b₂, b₃)，通过求解 Bc = v 得到向量 v 在新基下的坐标 c。
+          </p>
+
+          <div class="field-group">
+            <div class="field-group-header">
+              <span class="field-label">向量 v（E 下坐标）</span>
+              <span class="field-note">Vector</span>
+            </div>
+            <div class="vector-input">
+              <label class="axis-field"><span>X</span><input id="basis-v-x" type="number" step="0.1" value="2" aria-label="向量 v 的 x 坐标"></label>
+              <label class="axis-field"><span>Y</span><input id="basis-v-y" type="number" step="0.1" value="3" aria-label="向量 v 的 y 坐标"></label>
+              <label class="axis-field"><span>Z</span><input id="basis-v-z" type="number" step="0.1" value="1" aria-label="向量 v 的 z 坐标"></label>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-group-header">
+              <span class="field-label">新基向量（按列）</span>
+              <span class="field-note">B columns</span>
+            </div>
+            <div class="basis-input">
+              <span class="basis-name">b₁</span>
+              <div class="vector-input">
+                <label class="axis-field"><span>X</span><input id="b1-x" type="number" step="0.1" value="1" aria-label="b1 的 x 坐标"></label>
+                <label class="axis-field"><span>Y</span><input id="b1-y" type="number" step="0.1" value="1" aria-label="b1 的 y 坐标"></label>
+                <label class="axis-field"><span>Z</span><input id="b1-z" type="number" step="0.1" value="0" aria-label="b1 的 z 坐标"></label>
+              </div>
+            </div>
+            <div class="basis-input">
+              <span class="basis-name">b₂</span>
+              <div class="vector-input">
+                <label class="axis-field"><span>X</span><input id="b2-x" type="number" step="0.1" value="0" aria-label="b2 的 x 坐标"></label>
+                <label class="axis-field"><span>Y</span><input id="b2-y" type="number" step="0.1" value="1" aria-label="b2 的 y 坐标"></label>
+                <label class="axis-field"><span>Z</span><input id="b2-z" type="number" step="0.1" value="1" aria-label="b2 的 z 坐标"></label>
+              </div>
+            </div>
+            <div class="basis-input">
+              <span class="basis-name">b₃</span>
+              <div class="vector-input">
+                <label class="axis-field"><span>X</span><input id="b3-x" type="number" step="0.1" value="1" aria-label="b3 的 x 坐标"></label>
+                <label class="axis-field"><span>Y</span><input id="b3-y" type="number" step="0.1" value="0" aria-label="b3 的 y 坐标"></label>
+                <label class="axis-field"><span>Z</span><input id="b3-z" type="number" step="0.1" value="1" aria-label="b3 的 z 坐标"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="run-basis" type="button">求解新基坐标</button>
+            <button class="ghost-button" id="reset-basis" type="button">示例</button>
+          </div>
+
+          <div class="result-box" aria-live="polite">
+            <div class="result-title">坐标变换结果</div>
+            <div class="result-content" id="result-basis"></div>
+            <div class="formula">B = [b₁ b₂ b₃]，Bc = v，c = B⁻¹v</div>
+          </div>
+        </section>
+
+        <section class="mode-panel" id="panel-projection" aria-labelledby="title-projection">
+          <p class="eyebrow">Mode 03 / Dimension Reduction</p>
+          <h2 class="panel-title" id="title-projection">三维向量到二维平面投影</h2>
+          <p class="panel-intro">
+            投影平面由两个基向量 a₁、a₂ 张成。系统显示原向量、平面上的正交投影以及投影点的二维坐标。
+          </p>
+
+          <div class="field-group">
+            <div class="field-group-header">
+              <span class="field-label">待投影向量组</span>
+              <span class="field-note">One per line</span>
+            </div>
+            <textarea id="projection-vectors" spellcheck="false" aria-label="待投影的三维向量组">2, 3, 1
+-2, 2, 2
+1, 4, -2</textarea>
+            <p class="help-text">每行输入一个三维向量，例如：2, 3, 1。最多显示 8 个。</p>
+          </div>
+
+          <div class="field-group">
+            <div class="field-group-header">
+              <span class="field-label">投影平面基向量</span>
+              <span class="field-note">Plane basis</span>
+            </div>
+            <div class="basis-input">
+              <span class="basis-name">a₁</span>
+              <div class="vector-input">
+                <label class="axis-field"><span>X</span><input id="a1-x" type="number" step="0.1" value="1" aria-label="a1 的 x 坐标"></label>
+                <label class="axis-field"><span>Y</span><input id="a1-y" type="number" step="0.1" value="0" aria-label="a1 的 y 坐标"></label>
+                <label class="axis-field"><span>Z</span><input id="a1-z" type="number" step="0.1" value="0" aria-label="a1 的 z 坐标"></label>
+              </div>
+            </div>
+            <div class="basis-input">
+              <span class="basis-name">a₂</span>
+              <div class="vector-input">
+                <label class="axis-field"><span>X</span><input id="a2-x" type="number" step="0.1" value="0" aria-label="a2 的 x 坐标"></label>
+                <label class="axis-field"><span>Y</span><input id="a2-y" type="number" step="0.1" value="0" aria-label="a2 的 y 坐标"></label>
+                <label class="axis-field"><span>Z</span><input id="a2-z" type="number" step="0.1" value="1" aria-label="a2 的 z 坐标"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="run-projection" type="button">计算降维投影</button>
+            <button class="ghost-button" id="reset-projection" type="button">示例</button>
+          </div>
+
+          <div class="result-box" aria-live="polite">
+            <div class="result-title">二维坐标与误差</div>
+            <div class="result-content" id="result-projection"></div>
+            <div class="formula">P(v) = q₁q₁ᵀv + q₂q₂ᵀv，c = (q₁ᵀv, q₂ᵀv)</div>
+          </div>
+        </section>
+
+        <section class="mode-panel" id="panel-gram" aria-labelledby="title-gram">
+          <p class="eyebrow">Mode 04 / Orthogonalization</p>
+          <h2 class="panel-title" id="title-gram">施密特正交基</h2>
+          <p class="panel-intro">
+            对输入的向量组执行改进的格拉姆—施密特正交化，生成两两正交的单位向量 q₁、q₂、q₃。
+          </p>
+
+          <div class="field-group">
+            <div class="field-group-header">
+              <span class="field-label">原始三维向量组</span>
+              <span class="field-note">One per line</span>
+            </div>
+            <textarea id="gram-vectors" spellcheck="false" aria-label="用于施密特正交化的三维向量组">1, 1, 0
+1, 0, 1
+0, 1, 1</textarea>
+            <p class="help-text">每行输入一个三维向量，最多使用 6 个。线性相关的向量会被自动跳过。</p>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="run-gram" type="button">生成施密特正交基</button>
+            <button class="ghost-button" id="reset-gram" type="button">示例</button>
+          </div>
+
+          <div class="result-box" aria-live="polite">
+            <div class="result-title">正交归一化结果</div>
+            <div class="result-content" id="result-gram"></div>
+            <div class="formula">qᵢ = wᵢ / ‖wᵢ‖，qᵢᵀqⱼ = δᵢⱼ</div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="stage" id="stage" aria-label="三维向量可视化区域">
+        <div class="stage-toolbar">
+          <div class="stage-heading">
+            <div class="stage-kicker">Live 3D Viewport</div>
+            <h2 class="stage-title" id="stage-title">标准正交基中的向量</h2>
+            <p class="stage-subtitle" id="stage-subtitle">彩色坐标轴构成标准正交基；金色箭头表示当前位置向量。</p>
+          </div>
+          <div class="canvas-actions">
+            <button class="canvas-button" id="reset-view" type="button">重置视角</button>
+            <button class="canvas-button" id="export-image" type="button">导出 PNG</button>
+          </div>
+        </div>
+
+        <canvas id="scene" aria-label="可拖拽旋转的三维向量场景"></canvas>
+
+        <div class="scene-legend" id="scene-legend" aria-label="图例"></div>
+        <div class="scene-tip">拖拽旋转 · 滚轮缩放 · 双击复位</div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const COLORS = {
+      x: "#ff7e86",
+      y: "#68e7ac",
+      z: "#72a9ff",
+      gold: "#ffd166",
+      cyan: "#4de2e8",
+      pink: "#ff7eb6",
+      violet: "#ad8bff",
+      blue: "#62a8ff",
+      green: "#5ee6a8",
+      slate: "#91a7c1",
+      red: "#ff6b78",
+      palette: ["#ffd166", "#5ee6a8", "#62a8ff", "#ff7eb6", "#ad8bff", "#4de2e8", "#f59e72", "#a3e635"]
+    };
+
+    const MODE_COPY = {
+      standard: {
+        title: "标准正交基中的向量",
+        subtitle: "彩色坐标轴构成标准正交基；金色箭头表示当前位置向量。",
+        legend: [
+          ["x", COLORS.x, "e₁ / X 轴"],
+          ["y", COLORS.y, "e₂ / Y 轴"],
+          ["z", COLORS.z, "e₃ / Z 轴"],
+          ["v", COLORS.gold, "向量 v"]
+        ]
+      },
+      basis: {
+        title: "新基与坐标分解",
+        subtitle: "金色向量由三根新基向量按坐标 c₁、c₂、c₃ 线性组合得到。",
+        legend: [
+          ["b1", COLORS.blue, "b₁"],
+          ["b2", COLORS.green, "b₂"],
+          ["b3", COLORS.pink, "b₃"],
+          ["v", COLORS.gold, "向量 v"]
+        ]
+      },
+      projection: {
+        title: "三维向量到二维平面的投影",
+        subtitle: "半透明平面表示二维子空间；虚线连接原向量端点与正交投影点。",
+        legend: [
+          ["plane", COLORS.cyan, "二维投影平面"],
+          ["source", COLORS.slate, "原向量"],
+          ["projection", COLORS.gold, "正交投影"]
+        ]
+      },
+      gram: {
+        title: "施密特正交基",
+        subtitle: "淡色虚线为原始向量，高亮箭头为两两正交的单位向量 qᵢ。",
+        legend: [
+          ["original", COLORS.slate, "原始向量"],
+          ["q1", COLORS.green, "q₁"],
+          ["q2", COLORS.blue, "q₂"],
+          ["q3", COLORS.pink, "q₃"]
+        ]
+      }
+    };
+
+    const state = {
+      mode: "standard",
+      camera: { yaw: -0.62, pitch: 0.37, zoom: 1 },
+      standard: { vector: [3, 2, 2] },
+      basis: {
+        vector: [2, 3, 1],
+        basis: [[1, 1, 0], [0, 1, 1], [1, 0, 1]],
+        coordinates: [2, 1, 0],
+        valid: true
+      },
+      projection: {
+        vectors: [[2, 3, 1], [-2, 2, 2], [1, 4, -2]],
+        planeBasis: [[1, 0, 0], [0, 0, 1]],
+        projections: [],
+        coordinates: [],
+        frame: null,
+        valid: true
+      },
+      gram: {
+        vectors: [[1, 1, 0], [1, 0, 1], [0, 1, 1]],
+        orthogonal: [[Math.SQRT1_2, Math.SQRT1_2, 0], [1 / Math.sqrt(6), -1 / Math.sqrt(6), 2 / Math.sqrt(6)], [-Math.sqrt(2 / 3), Math.sqrt(2 / 3), Math.sqrt(2 / 3)]],
+        valid: true
+      }
+    };
+
+    const canvas = document.getElementById("scene");
+    const ctx = canvas.getContext("2d");
+    const stage = document.getElementById("stage");
+    const titleEl = document.getElementById("stage-title");
+    const subtitleEl = document.getElementById("stage-subtitle");
+    const legendEl = document.getElementById("scene-legend");
+    const toastEl = document.getElementById("toast");
+    let cssWidth = 0;
+    let cssHeight = 0;
+    let isDragging = false;
+    let dragOrigin = { x: 0, y: 0 };
+    let cameraOrigin = { yaw: 0, pitch: 0 };
+    let toastTimer = null;
+    let renderRequest = null;
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function add(a, b) {
+      return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    }
+
+    function subtract(a, b) {
+      return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    }
+
+    function scaleVector(vector, scalar) {
+      return [vector[0] * scalar, vector[1] * scalar, vector[2] * scalar];
+    }
+
+    function dot(a, b) {
+      return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    }
+
+    function norm(vector) {
+      return Math.sqrt(dot(vector, vector));
+    }
+
+    function normalize(vector) {
+      const length = norm(vector);
+      if (length < 1e-12) {
+        throw new Error("零向量不能用于归一化");
+      }
+      return scaleVector(vector, 1 / length);
+    }
+
+    function formatNumber(value, digits = 3) {
+      if (Math.abs(value) < 1e-10) value = 0;
+      const rounded = Number(value.toFixed(digits));
+      return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+    }
+
+    function vectorText(vector, digits = 2) {
+      return `(${vector.map((value) => formatNumber(value, digits)).join(", ")})`;
+    }
+
+    function parseVectorText(input) {
+      const cleaned = String(input)
+        .replace(/[\[\]()（）]/g, " ")
+        .replace(/[−–]/g, "-")
+        .trim();
+      const parts = cleaned.split(/[\s,，;；]+/).filter(Boolean);
+      if (parts.length !== 3) {
+        throw new Error(`需要 3 个数值，实际得到 ${parts.length} 个`);
+      }
+      const vector = parts.map(Number);
+      if (vector.some((value) => !Number.isFinite(value))) {
+        throw new Error("向量中包含非法数值");
+      }
+      return vector;
+    }
+
+    function parseVectorSet(text, maxCount) {
+      const lines = String(text)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      if (lines.length === 0) {
+        throw new Error("请至少输入一个三维向量");
+      }
+      if (lines.length > maxCount) {
+        throw new Error(`最多输入 ${maxCount} 个向量`);
+      }
+      return lines.map((line, index) => {
+        try {
+          return parseVectorText(line);
+        } catch (error) {
+          throw new Error(`第 ${index + 1} 行：${error.message}`);
+        }
+      });
+    }
+
+    function readTriple(prefix) {
+      return ["x", "y", "z"].map((axis) => {
+        const value = Number(document.getElementById(`${prefix}-${axis}`).value);
+        if (!Number.isFinite(value)) {
+          throw new Error(`输入 ${prefix.toUpperCase()} 向量时存在空值或非法数值`);
+        }
+        return value;
+      });
+    }
+
+    function setVectorInputs(prefix, vector) {
+      ["x", "y", "z"].forEach((axis, index) => {
+        document.getElementById(`${prefix}-${axis}`).value = vector[index];
+      });
+    }
+
+    function solve3(matrix, vector) {
+      const augmented = matrix.map((row, index) => [...row, vector[index]]);
+      const tolerance = 1e-10;
+
+      for (let column = 0; column < 3; column += 1) {
+        let pivot = column;
+        for (let row = column + 1; row < 3; row += 1) {
+          if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) {
+            pivot = row;
+          }
+        }
+        if (Math.abs(augmented[pivot][column]) < tolerance) {
+          throw new Error("三个基向量线性相关，矩阵不可逆，无法唯一表示向量");
+        }
+        [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
+
+        const pivotValue = augmented[column][column];
+        for (let index = column; index < 4; index += 1) {
+          augmented[column][index] /= pivotValue;
+        }
+        for (let row = 0; row < 3; row += 1) {
+          if (row === column) continue;
+          const factor = augmented[row][column];
+          for (let index = column; index < 4; index += 1) {
+            augmented[row][index] -= factor * augmented[column][index];
+          }
+        }
+      }
+      return augmented.map((row) => row[3]);
+    }
+
+    function orthogonalize(vectors, strict = false) {
+      const result = [];
+      for (const source of vectors) {
+        let residual = source.slice();
+        const sourceNorm = norm(source);
+        if (sourceNorm < 1e-12) continue;
+
+        // 两遍投影可以显著减小浮点累积误差。
+        for (let pass = 0; pass < 2; pass += 1) {
+          for (const q of result) {
+            residual = subtract(residual, scaleVector(q, dot(residual, q)));
+          }
+        }
+
+        const residualNorm = norm(residual);
+        const tolerance = 1e-9 * Math.max(1, sourceNorm);
+        if (residualNorm > tolerance) {
+          result.push(scaleVector(residual, 1 / residualNorm));
+          if (result.length === 3) break;
+        }
+      }
+
+      if (strict && result.length < 2) {
+        throw new Error("两个平面基向量线性相关，无法确定二维平面");
+      }
+      return result;
+    }
+
+    function projectionFrame(a, b) {
+      const q1 = normalize(a);
+      let second = subtract(b, scaleVector(q1, dot(b, q1)));
+      const secondNorm = norm(second);
+      if (secondNorm < 1e-9 * Math.max(1, norm(b))) {
+        throw new Error("两个平面基向量线性相关，无法张成二维平面");
+      }
+      const q2 = scaleVector(second, 1 / secondNorm);
+      return [q1, q2];
+    }
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toastEl.classList.remove("show"), 2200);
+    }
+
+    function setResult(id, html) {
+      document.getElementById(id).innerHTML = html;
+    }
+
+    function updateLegend(mode) {
+      legendEl.innerHTML = MODE_COPY[mode].legend
+        .map(([, color, text]) => `<span class="legend-item" style="color:${color}"><i class="legend-swatch"></i>${text}</span>`)
+        .join("");
+    }
+
+    function activateMode(mode) {
+      state.mode = mode;
+      if (window.location.hash !== `#${mode}`) {
+        window.history.replaceState(null, "", `#${mode}`);
+      }
+      document.querySelectorAll(".mode-tab").forEach((button) => {
+        const active = button.dataset.mode === mode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      document.querySelectorAll(".mode-panel").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === `panel-${mode}`);
+      });
+      titleEl.textContent = MODE_COPY[mode].title;
+      subtitleEl.textContent = MODE_COPY[mode].subtitle;
+      updateLegend(mode);
+      runMode(mode, false);
+      scheduleDraw();
+    }
+
+    function runStandard(showMessage = true) {
+      try {
+        state.standard.vector = readTriple("std");
+        const [x, y, z] = state.standard.vector;
+        setResult(
+          "result-standard",
+          `<strong>v</strong> = ${vectorText(state.standard.vector)}<br>
+           <span class="ok">✓</span> ‖v‖ = ${formatNumber(norm(state.standard.vector))}<br>
+           坐标分量：vₓ=${formatNumber(x)}, vᵧ=${formatNumber(y)}, v_z=${formatNumber(z)}`
+        );
+        scheduleDraw();
+        if (showMessage) showToast("标准正交基视图已更新");
+        return true;
+      } catch (error) {
+        setResult("result-standard", `<span class="error">! ${error.message}</span>`);
+        return false;
+      }
+    }
+
+    function runBasis(showMessage = true) {
+      try {
+        const vector = readTriple("basis-v");
+        const basis = [readTriple("b1"), readTriple("b2"), readTriple("b3")];
+        const matrix = [
+          [basis[0][0], basis[1][0], basis[2][0]],
+          [basis[0][1], basis[1][1], basis[2][1]],
+          [basis[0][2], basis[1][2], basis[2][2]]
+        ];
+        const coordinates = solve3(matrix, vector);
+        state.basis = { vector, basis, coordinates, valid: true };
+        setResult(
+          "result-basis",
+          `<strong>c</strong> = ${vectorText(coordinates)}<br>
+           c₁ = ${formatNumber(coordinates[0])}，c₂ = ${formatNumber(coordinates[1])}，c₃ = ${formatNumber(coordinates[2])}<br>
+           <span class="ok">✓</span> Bc 与 v 的误差 = ${formatNumber(norm(subtract(
+             add(
+               add(scaleVector(basis[0], coordinates[0]), scaleVector(basis[1], coordinates[1])),
+               scaleVector(basis[2], coordinates[2])
+             ),
+             vector
+           )), 8)}`
+        );
+        scheduleDraw();
+        if (showMessage) showToast("新基坐标计算完成");
+        return true;
+      } catch (error) {
+        const basis = [readSafeTriple("b1"), readSafeTriple("b2"), readSafeTriple("b3")];
+        state.basis = {
+          vector: readSafeTriple("basis-v"),
+          basis: basis,
+          coordinates: [],
+          valid: false
+        };
+        setResult("result-basis", `<span class="error">! ${error.message}</span>`);
+        scheduleDraw();
+        return false;
+      }
+    }
+
+    function readSafeTriple(prefix) {
+      try {
+        return readTriple(prefix);
+      } catch {
+        return [0, 0, 0];
+      }
+    }
+
+    function runProjection(showMessage = true) {
+      try {
+        const vectors = parseVectorSet(document.getElementById("projection-vectors").value, 8);
+        const planeBasis = [readTriple("a1"), readTriple("a2")];
+        const frame = projectionFrame(planeBasis[0], planeBasis[1]);
+        const projections = vectors.map((vector) =>
+          add(
+            scaleVector(frame[0], dot(vector, frame[0])),
+            scaleVector(frame[1], dot(vector, frame[1]))
+          )
+        );
+        const coordinates = vectors.map((vector) => [dot(vector, frame[0]), dot(vector, frame[1])]);
+        state.projection = {
+          vectors,
+          planeBasis,
+          projections,
+          coordinates,
+          frame,
+          valid: true
+        };
+        const rows = projections.map((projection, index) => {
+          const residual = norm(subtract(vectors[index], projection));
+          return `<span class="ok">P(v${index + 1})</span> = ${vectorText(projection)}<br>
+            　　二维坐标 = (${formatNumber(coordinates[index][0])}, ${formatNumber(coordinates[index][1])})，降维损失 = ${formatNumber(residual)}`;
+        });
+        setResult(
+          "result-projection",
+          `<span class="ok">✓</span> 已生成 ${vectors.length} 个正交投影<br>${rows.join("<br>")}`
+        );
+        scheduleDraw();
+        if (showMessage) showToast("二维投影计算完成");
+        return true;
+      } catch (error) {
+        state.projection = {
+          vectors: [],
+          planeBasis: [readSafeTriple("a1"), readSafeTriple("a2")],
+          projections: [],
+          coordinates: [],
+          frame: null,
+          valid: false
+        };
+        setResult("result-projection", `<span class="error">! ${error.message}</span>`);
+        scheduleDraw();
+        return false;
+      }
+    }
+
+    function runGram(showMessage = true) {
+      try {
+        const vectors = parseVectorSet(document.getElementById("gram-vectors").value, 6);
+        const orthogonal = orthogonalize(vectors);
+        if (orthogonal.length === 0) {
+          throw new Error("输入向量组均为零向量，无法生成正交基");
+        }
+        state.gram = { vectors, orthogonal, valid: true };
+        const lines = orthogonal.map((q, index) => {
+          const checks = orthogonal
+            .slice(0, index)
+            .map((previous) => formatNumber(dot(q, previous), 6));
+          const orthogonalText = checks.length ? `，与前向量内积 ${checks.join(", ")}` : "";
+          return `<span class="ok">q${index + 1}</span> = ${vectorText(q, 4)}<br>　　‖q${index + 1}‖ = ${formatNumber(norm(q), 8)}${orthogonalText}`;
+        });
+        const rankNotice = orthogonal.length < 3
+          ? `<br><span class="warn">! 输入向量组的秩为 ${orthogonal.length}，只能生成 ${orthogonal.length} 个正交基向量。</span>`
+          : `<br><span class="ok">✓</span> QᵀQ = I₃`;
+        setResult("result-gram", `${lines.join("<br>")}${rankNotice}`);
+        scheduleDraw();
+        if (showMessage) showToast("施密特正交基生成完成");
+        return true;
+      } catch (error) {
+        state.gram = { vectors: [], orthogonal: [], valid: false };
+        setResult("result-gram", `<span class="error">! ${error.message}</span>`);
+        scheduleDraw();
+        return false;
+      }
+    }
+
+    function runMode(mode, showMessage = true) {
+      if (mode === "standard") return runStandard(showMessage);
+      if (mode === "basis") return runBasis(showMessage);
+      if (mode === "projection") return runProjection(showMessage);
+      return runGram(showMessage);
+    }
+
+    function scheduleDraw() {
+      if (renderRequest !== null) return;
+      renderRequest = window.requestAnimationFrame(() => {
+        renderRequest = null;
+        drawScene();
+      });
+    }
+
+    function resizeCanvas() {
+      const rectangle = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cssWidth = Math.max(1, rectangle.width);
+      cssHeight = Math.max(1, rectangle.height);
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      scheduleDraw();
+    }
+
+    function projectPoint(point) {
+      const { yaw, pitch, zoom } = state.camera;
+      const cosYaw = Math.cos(yaw);
+      const sinYaw = Math.sin(yaw);
+      const cosPitch = Math.cos(pitch);
+      const sinPitch = Math.sin(pitch);
+
+      const x1 = cosYaw * point[0] - sinYaw * point[2];
+      const z1 = sinYaw * point[0] + cosYaw * point[2];
+      const y2 = cosPitch * point[1] - sinPitch * z1;
+      const depth = sinPitch * point[1] + cosPitch * z1;
+      const baseScale = Math.min(cssWidth, cssHeight) / 10.8;
+      const scale = baseScale * zoom;
+
+      return {
+        x: cssWidth * 0.5 + x1 * scale,
+        y: cssHeight * 0.53 - y2 * scale,
+        depth
+      };
+    }
+
+    function roundedRectangle(x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function drawLabel(text, point, color, options = {}) {
+      const screen = projectPoint(point);
+      const offsetX = options.offsetX ?? 9;
+      const offsetY = options.offsetY ?? -10;
+      const alpha = options.alpha ?? 1;
+      const fontSize = options.fontSize ?? 11;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `600 ${fontSize}px "Segoe UI", "Microsoft YaHei UI", sans-serif`;
+      const paddingX = 7;
+      const height = fontSize + 10;
+      const width = ctx.measureText(text).width + paddingX * 2;
+      const x = screen.x + offsetX;
+      const y = screen.y + offsetY - height / 2;
+      roundedRectangle(x, y, width, height, 6);
+      ctx.fillStyle = "rgba(4, 12, 23, 0.82)";
+      ctx.fill();
+      ctx.strokeStyle = `${color}55`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x + paddingX, y + height / 2 + 0.5);
+      ctx.restore();
+    }
+
+    function drawArrow(start, end, color, options = {}) {
+      const a = projectPoint(start);
+      const b = projectPoint(end);
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.hypot(dx, dy);
+      if (length < 0.5) return;
+
+      const alpha = options.alpha ?? 1;
+      const lineWidth = options.lineWidth ?? 2;
+      const headLength = options.headLength ?? clamp(6 + lineWidth * 2.2, 8, 16);
+      const angle = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      if (options.dash) ctx.setLineDash(options.dash);
+      if (options.shadow !== false) {
+        ctx.shadowColor = `${color}88`;
+        ctx.shadowBlur = clamp(lineWidth * 4, 4, 16);
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(
+        b.x - headLength * Math.cos(angle - Math.PI / 6),
+        b.y - headLength * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        b.x - headLength * Math.cos(angle + Math.PI / 6),
+        b.y - headLength * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawLine3D(start, end, color, width = 1, dash = []) {
+      const a = projectPoint(start);
+      const b = projectPoint(end);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPoint3D(point, color, radius = 4) {
+      const screen = projectPoint(point);
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 9;
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+      const gradient = ctx.createRadialGradient(
+        cssWidth * 0.48,
+        cssHeight * 0.42,
+        20,
+        cssWidth * 0.48,
+        cssHeight * 0.42,
+        Math.max(cssWidth, cssHeight) * 0.7
+      );
+      gradient.addColorStop(0, "rgba(17, 43, 70, 0.72)");
+      gradient.addColorStop(0.55, "rgba(8, 20, 35, 0.48)");
+      gradient.addColorStop(1, "rgba(3, 9, 17, 0.1)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      for (let index = 0; index < 26; index += 1) {
+        const x = ((index * 137.5) % 1) * cssWidth;
+        const y = ((index * 83.7) % 1) * cssHeight;
+        ctx.fillStyle = index % 3 === 0 ? COLORS.cyan : "#9db7d7";
+        ctx.beginPath();
+        ctx.arc(x, y, index % 4 === 0 ? 1.2 : 0.65, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawGroundGrid() {
+      const extent = 5;
+      for (let value = -extent; value <= extent; value += 1) {
+        if (value === 0) continue;
+        const major = value % 5 === 0;
+        const color = major ? "rgba(130, 166, 207, 0.14)" : "rgba(116, 151, 192, 0.07)";
+        drawLine3D([value, 0, -extent], [value, 0, extent], color, major ? 1.05 : 0.72);
+        drawLine3D([-extent, 0, value], [extent, 0, value], color, major ? 1.05 : 0.72);
+      }
+    }
+
+    function drawAxes() {
+      const extent = 5.3;
+      drawLine3D([-extent, 0, 0], [0, 0, 0], "rgba(255, 126, 134, 0.22)", 1);
+      drawLine3D([0, -extent, 0], [0, 0, 0], "rgba(104, 231, 172, 0.2)", 1);
+      drawLine3D([0, 0, -extent], [0, 0, 0], "rgba(114, 169, 255, 0.2)", 1);
+
+      drawArrow([0, 0, 0], [extent, 0, 0], COLORS.x, { lineWidth: 1.35, alpha: 0.83, headLength: 9 });
+      drawArrow([0, 0, 0], [0, extent, 0], COLORS.y, { lineWidth: 1.35, alpha: 0.83, headLength: 9 });
+      drawArrow([0, 0, 0], [0, 0, extent], COLORS.z, { lineWidth: 1.35, alpha: 0.83, headLength: 9 });
+
+      drawLabel("e₁  X", [extent, 0, 0], COLORS.x, { offsetX: 8, offsetY: -16, fontSize: 10 });
+      drawLabel("e₂  Y", [0, extent, 0], COLORS.y, { offsetX: 8, offsetY: -14, fontSize: 10 });
+      drawLabel("e₃  Z", [0, 0, extent], COLORS.z, { offsetX: 8, offsetY: -14, fontSize: 10 });
+
+      const origin = projectPoint([0, 0, 0]);
+      ctx.save();
+      ctx.fillStyle = "#dce9f7";
+      ctx.shadowColor = COLORS.cyan;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(origin.x, origin.y, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPlane(frame, color = COLORS.cyan) {
+      if (!frame) return;
+      const [q1, q2] = frame;
+      const extent = 4.6;
+      const corner = (u, v) => add(scaleVector(q1, u), scaleVector(q2, v));
+      const corners = [corner(-extent, -extent), corner(extent, -extent), corner(extent, extent), corner(-extent, extent)];
+      const projected = corners.map(projectPoint);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(projected[0].x, projected[0].y);
+      projected.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+      ctx.closePath();
+      ctx.fillStyle = `${color}12`;
+      ctx.fill();
+      ctx.strokeStyle = `${color}55`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+
+      for (let value = -4; value <= 4; value += 1) {
+        drawLine3D(corner(value, -extent), corner(value, extent), "rgba(77, 226, 232, 0.10)", 0.65);
+        drawLine3D(corner(-extent, value), corner(extent, value), "rgba(77, 226, 232, 0.10)", 0.65);
+      }
+
+      drawArrow([0, 0, 0], scaleVector(q1, 2.3), COLORS.cyan, { lineWidth: 1.8, alpha: 0.9, headLength: 10 });
+      drawArrow([0, 0, 0], scaleVector(q2, 2.3), COLORS.violet, { lineWidth: 1.8, alpha: 0.9, headLength: 10 });
+      drawLabel("q₁ · 平面方向", scaleVector(q1, 2.3), COLORS.cyan, { fontSize: 9 });
+      drawLabel("q₂ · 平面方向", scaleVector(q2, 2.3), COLORS.violet, { fontSize: 9 });
+    }
+
+    function drawStandardScene() {
+      drawGroundGrid();
+      drawAxes();
+      const vector = state.standard.vector;
+      const [x, y, z] = vector;
+      const endpoint = [x, y, z];
+      const xPoint = [x, 0, 0];
+      const yPoint = [0, y, 0];
+      const zPoint = [0, 0, z];
+
+      drawLine3D(endpoint, xPoint, "rgba(255, 209, 102, 0.34)", 1, [4, 5]);
+      drawLine3D(endpoint, yPoint, "rgba(255, 209, 102, 0.34)", 1, [4, 5]);
+      drawLine3D(endpoint, zPoint, "rgba(255, 209, 102, 0.34)", 1, [4, 5]);
+      drawLine3D(xPoint, [0, 0, 0], "rgba(255, 126, 134, 0.55)", 1, [2, 5]);
+      drawLine3D(yPoint, [0, 0, 0], "rgba(104, 231, 172, 0.55)", 1, [2, 5]);
+      drawLine3D(zPoint, [0, 0, 0], "rgba(114, 169, 255, 0.55)", 1, [2, 5]);
+
+      drawPoint3D(xPoint, COLORS.x, 3);
+      drawPoint3D(yPoint, COLORS.y, 3);
+      drawPoint3D(zPoint, COLORS.z, 3);
+      drawArrow([0, 0, 0], endpoint, COLORS.gold, { lineWidth: 3.3, headLength: 13 });
+      drawPoint3D(endpoint, COLORS.gold, 4.2);
+      drawLabel(`v ${vectorText(vector)}`, endpoint, COLORS.gold, { fontSize: 11 });
+    }
+
+    function drawBasisScene() {
+      drawGroundGrid();
+      drawAxes();
+      const { vector, basis, coordinates, valid } = state.basis;
+      const basisColors = [COLORS.blue, COLORS.green, COLORS.pink];
+
+      basis.forEach((base, index) => {
+        drawArrow([0, 0, 0], base, basisColors[index], {
+          lineWidth: 2.5,
+          headLength: 11,
+          alpha: 0.84
+        });
+        drawLabel(`b${index + 1}`, base, basisColors[index], { fontSize: 11 });
+      });
+
+      if (valid && coordinates.length === 3) {
+        let chain = [0, 0, 0];
+        coordinates.forEach((coefficient, index) => {
+          const next = add(chain, scaleVector(basis[index], coefficient));
+          drawArrow(chain, next, basisColors[index], {
+            lineWidth: 1.4,
+            headLength: 8,
+            alpha: 0.5,
+            dash: [4, 4],
+            shadow: false
+          });
+          chain = next;
+        });
+      }
+
+      drawArrow([0, 0, 0], vector, COLORS.gold, { lineWidth: 3.15, headLength: 13 });
+      drawPoint3D(vector, COLORS.gold, 4);
+      drawLabel(`v ${vectorText(vector)}`, vector, COLORS.gold, { fontSize: 11 });
+      drawLabel(
+        valid ? `c ${vectorText(coordinates)}` : "基向量线性相关",
+        [0.35, 0.8, 0.35],
+        valid ? COLORS.cyan : COLORS.red,
+        { fontSize: 10, offsetX: 0, offsetY: 22 }
+      );
+    }
+
+    function drawProjectionScene() {
+      const { vectors, projections, coordinates, frame, valid } = state.projection;
+      if (frame) drawPlane(frame);
+      drawGroundGrid();
+      drawAxes();
+      if (!valid) return;
+
+      vectors.forEach((vector, index) => {
+        const color = COLORS.palette[index % COLORS.palette.length];
+        const projection = projections[index];
+        drawArrow([0, 0, 0], vector, color, {
+          lineWidth: 2.25,
+          alpha: 0.64,
+          headLength: 10
+        });
+        drawLine3D(vector, projection, `${color}88`, 1.15, [4, 4]);
+        drawPoint3D(vector, color, 3.2);
+        drawLabel(`v${index + 1}`, vector, color, { fontSize: 10 });
+
+        drawArrow([0, 0, 0], projection, color, {
+          lineWidth: 3.1,
+          alpha: 0.95,
+          headLength: 12
+        });
+        drawPoint3D(projection, color, 4);
+        drawLabel(
+          `P(v${index + 1}) (${formatNumber(coordinates[index][0], 2)}, ${formatNumber(coordinates[index][1], 2)})`,
+          projection,
+          color,
+          { fontSize: 9, offsetX: 8, offsetY: 17 }
+        );
+      });
+    }
+
+    function drawGramScene() {
+      drawGroundGrid();
+      drawAxes();
+      const { vectors, orthogonal, valid } = state.gram;
+      const qColors = [COLORS.green, COLORS.blue, COLORS.pink];
+
+      if (!valid) {
+        vectors.forEach((vector, index) => {
+          drawArrow([0, 0, 0], vector, COLORS.slate, {
+            lineWidth: 1.3,
+            alpha: 0.3,
+            dash: [4, 5],
+            shadow: false
+          });
+          drawLabel(`v${index + 1}`, vector, COLORS.slate, { fontSize: 9, alpha: 0.72 });
+        });
+        return;
+      }
+
+      vectors.forEach((vector, index) => {
+        drawArrow([0, 0, 0], vector, COLORS.slate, {
+          lineWidth: 1.35,
+          alpha: 0.32,
+          dash: [5, 5],
+          shadow: false
+        });
+        drawPoint3D(vector, COLORS.slate, 2.2);
+        drawLabel(`v${index + 1}`, vector, COLORS.slate, { fontSize: 9, alpha: 0.66 });
+      });
+
+      orthogonal.forEach((q, index) => {
+        const color = qColors[index % qColors.length];
+        drawArrow([0, 0, 0], scaleVector(q, 2.4), color, {
+          lineWidth: 3.2,
+          headLength: 13,
+          alpha: 1
+        });
+        drawPoint3D(scaleVector(q, 2.4), color, 3.6);
+        drawLabel(`q${index + 1}`, scaleVector(q, 2.4), color, {
+          fontSize: 11,
+          offsetX: 8,
+          offsetY: -13
+        });
+      });
+
+      drawLabel(
+        orthogonal.length === 3 ? "QᵀQ = I₃" : `rank = ${orthogonal.length}`,
+        [0.2, 0.75, 0.2],
+        orthogonal.length === 3 ? COLORS.green : COLORS.gold,
+        { fontSize: 10, offsetX: 2, offsetY: 24 }
+      );
+    }
+
+    function drawScene() {
+      if (!ctx || cssWidth < 1 || cssHeight < 1) return;
+      drawBackground();
+      if (state.mode === "standard") drawStandardScene();
+      else if (state.mode === "basis") drawBasisScene();
+      else if (state.mode === "projection") drawProjectionScene();
+      else drawGramScene();
+    }
+
+    function resetView() {
+      state.camera = { yaw: -0.62, pitch: 0.37, zoom: 1 };
+      scheduleDraw();
+    }
+
+    function exportImage() {
+      drawScene();
+      const link = document.createElement("a");
+      const modeNames = {
+        standard: "标准正交基",
+        basis: "新基坐标",
+        projection: "二维投影",
+        gram: "施密特正交基"
+      };
+      link.download = `${modeNames[state.mode]}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      showToast("当前可视化图像已导出");
+    }
+
+    document.querySelectorAll(".mode-tab").forEach((button) => {
+      button.addEventListener("click", () => activateMode(button.dataset.mode));
+    });
+
+    window.addEventListener("hashchange", () => {
+      const requestedMode = window.location.hash.slice(1);
+      if (MODE_COPY[requestedMode] && requestedMode !== state.mode) {
+        activateMode(requestedMode);
+      }
+    });
+
+    document.getElementById("run-standard").addEventListener("click", () => runStandard(true));
+    document.getElementById("run-basis").addEventListener("click", () => runBasis(true));
+    document.getElementById("run-projection").addEventListener("click", () => runProjection(true));
+    document.getElementById("run-gram").addEventListener("click", () => runGram(true));
+
+    document.getElementById("reset-standard").addEventListener("click", () => {
+      setVectorInputs("std", [3, 2, 2]);
+      runStandard(false);
+      showToast("已恢复标准正交基示例");
+    });
+
+    document.getElementById("reset-basis").addEventListener("click", () => {
+      setVectorInputs("basis-v", [2, 3, 1]);
+      setVectorInputs("b1", [1, 1, 0]);
+      setVectorInputs("b2", [0, 1, 1]);
+      setVectorInputs("b3", [1, 0, 1]);
+      runBasis(false);
+      showToast("已恢复新基坐标示例");
+    });
+
+    document.getElementById("reset-projection").addEventListener("click", () => {
+      document.getElementById("projection-vectors").value = "2, 3, 1\n-2, 2, 2\n1, 4, -2";
+      setVectorInputs("a1", [1, 0, 0]);
+      setVectorInputs("a2", [0, 0, 1]);
+      runProjection(false);
+      showToast("已恢复二维投影示例");
+    });
+
+    document.getElementById("reset-gram").addEventListener("click", () => {
+      document.getElementById("gram-vectors").value = "1, 1, 0\n1, 0, 1\n0, 1, 1";
+      runGram(false);
+      showToast("已恢复施密特正交化示例");
+    });
+
+    document.getElementById("reset-view").addEventListener("click", resetView);
+    document.getElementById("export-image").addEventListener("click", exportImage);
+
+    document.querySelectorAll(".mode-panel input, .mode-panel textarea").forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          runMode(state.mode, false);
+        }
+      });
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      isDragging = true;
+      dragOrigin = { x: event.clientX, y: event.clientY };
+      cameraOrigin = { yaw: state.camera.yaw, pitch: state.camera.pitch };
+      canvas.setPointerCapture(event.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!isDragging) return;
+      const dx = event.clientX - dragOrigin.x;
+      const dy = event.clientY - dragOrigin.y;
+      state.camera.yaw = cameraOrigin.yaw + dx * 0.008;
+      state.camera.pitch = clamp(cameraOrigin.pitch + dy * 0.006, -1.24, 1.24);
+      scheduleDraw();
+    });
+
+    function endDrag(event) {
+      if (!isDragging) return;
+      isDragging = false;
+      if (canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    canvas.addEventListener("dblclick", resetView);
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const factor = event.deltaY > 0 ? 0.92 : 1.08;
+      state.camera.zoom = clamp(state.camera.zoom * factor, 0.62, 1.82);
+      scheduleDraw();
+    }, { passive: false });
+
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+    resizeObserver.observe(stage);
+
+    const initialMode = window.location.hash.slice(1);
+    if (MODE_COPY[initialMode]) state.mode = initialMode;
+
+    updateLegend(state.mode);
+    resizeCanvas();
+    runStandard(false);
+    runBasis(false);
+    runProjection(false);
+    runGram(false);
+    if (state.mode !== "standard") activateMode(state.mode);
+    scheduleDraw();
+  </script>
+</body>
+</html>
